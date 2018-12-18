@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%d{yyyy-mm-dd HH:mm:ss.SSS} [%thread] %-5level %logger#%line - %msg%n
+			</pattern>
+		</encoder>
+	</appender>
+
+	<logger name="org.apache.commons" level="ERROR" />
+	<logger name="org.apache.http" level="DEBUG" />
+	<logger name="org.springframework" level="INFO" />
+	<logger name="org.hyperledger.fabric" level="INFO" />
+	<logger name="io.netty" level="INFO" />
+	<logger name="io.grpc" level="INFO" />
+	
+	<logger name="com.penglecode" level="INFO" />
+
+	<root level="INFO">
+		<appender-ref ref="CONSOLE" />
+	</root>
+</configuration>

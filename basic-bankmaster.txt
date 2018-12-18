@@ -1,0 +1,19 @@
+1、停止/清除正在运行的bankmaster网络
+	./teardown.sh
+	
+2、生成创世块
+	./generate.sh bankchannel	#如果第3步使用了相同的channel名称则此第2步可省略
+
+	
+3、启动bankmaster网络
+	./start bankchannel			#注意：如果更换了channel的名称，则需要先运行第2步以创建相同channel名称的创世块
+	
+4、安装链码
+
+	docker exec cli peer chaincode install -l java -n bankmaster -v 1.0 -p /opt/gopath/src/github.com/bankmaster/java/
+	
+5、初始化链码
+
+	docker exec cli peer chaincode instantiate -o orderer.example.com:7050 -C bankchannel -n bankmaster -l java -v 1.0 -c '{"Args":["init","100000000"]}' -P "OR ('Org1MSP.member')"
+	
+	
