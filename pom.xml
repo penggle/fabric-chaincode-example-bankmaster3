@@ -1,10 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.penglecode</groupId>
-	<artifactId>fabric-chaincode-example-bankmaster2</artifactId>
+	<groupId>com.certusnet</groupId>
+	<artifactId>fabric-chaincode-example-bankmaster3</artifactId>
 	<version>1.0.0</version>
-	<name>fabric-chaincode-example-bankmaster2</name>
+	<name>fabric-chaincode-example-bankmaster3</name>
 	<description>HyperLadger Fabric Java版智能合约例子：bankmaster</description>
 
 	<properties>
@@ -185,7 +185,7 @@
 							<transformers>
 								<transformer
 									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>com.penglecode.fabric.chaincode.bankmaster.chaincode.BankMasterChaincode</mainClass>
+									<mainClass>com.certusnet.fabric.chaincode.bankmaster.chaincode.BankMasterChaincode</mainClass>
 								</transformer>
 								<transformer
 									implementation="org.apache.maven.plugins.shade.resource.XmlAppendingTransformer">
