@@ -6,7 +6,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -23,10 +25,16 @@ import org.springframework.util.CollectionUtils;
 import com.certusnet.fabric.chaincode.bankmaster.domain.AccountTransaction;
 import com.certusnet.fabric.chaincode.bankmaster.domain.AccountTransactionType;
 import com.certusnet.fabric.chaincode.bankmaster.domain.CustomerAccount;
-import com.certusnet.fabric.chaincode.common.util.BankUtils;
-import com.certusnet.fabric.chaincode.common.util.DateTimeUtils;
 import com.certusnet.fabric.chaincode.common.util.JsonUtils;
 
+/**
+ * BankMaster应用的智能合约
+ * 
+ * !!!注意：请不要在在链码中使用与本机相关的信息(例如本机当前时间)，以免可能造成背书结果不一致而导致事物失败，请在SDK客户端使用transient data进行传递!!!
+ * 
+ * @author 	pengpeng
+ * @date	2018年12月25日 下午4:09:58
+ */
 public class BankMasterChaincode extends ChaincodeBase {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(BankMasterChaincode.class);
@@ -34,8 +42,6 @@ public class BankMasterChaincode extends ChaincodeBase {
 	private static final Charset CHARSET = StandardCharsets.UTF_8;
 	
 	private static final Double DEFAULT_ACCOUNT_BALANCE = 0.0;
-	
-	private static final String BANK_CARD_PREFIX = "6225";
 	
 	private static final String KEY_BANK_BALANCE = "BANK_BALANCE";
 	
@@ -120,16 +126,13 @@ public class BankMasterChaincode extends ChaincodeBase {
 			if(StringUtils.isBlank(account.getMobilePhone())) {
 				return newErrorResponse("请求参数不合法：开户人手机号码不能为空!");
 			}
-			String nowTime = DateTimeUtils.formatNow();
 			account.setAccountBalance(ObjectUtils.defaultIfNull(account.getAccountBalance(), DEFAULT_ACCOUNT_BALANCE));
-			account.setCreatedTime(nowTime);
-			account.setAccountNo(BankUtils.genBankCardNo(BANK_CARD_PREFIX));
 			
 			String jsonAccount = saveCustomerAccount(stub, account); //保存账户
 			
 			AccountTransaction transaction = new AccountTransaction(stub.getTxId(), account.getAccountNo(), 0.0,
 					account.getAccountBalance(), account.getAccountBalance(), null,
-					AccountTransactionType.CREATE_ACCOUNT.name(), AccountTransactionType.CREATE_ACCOUNT.getDescription(), nowTime);
+					AccountTransactionType.CREATE_ACCOUNT.name(), AccountTransactionType.CREATE_ACCOUNT.getDescription(), account.getCreatedTime());
 			
 			saveAccountTransaction(stub, transaction); //保存账户交易快照
 			
@@ -151,6 +154,7 @@ public class BankMasterChaincode extends ChaincodeBase {
 	 * @throws Exception
 	 */
 	protected synchronized Response depositMoney(ChaincodeStub stub, List<String> args) throws Exception {
+		Map<String,byte[]> transients = stub.getTransient();
 		String accountNo = null;
 		String amountValue = null;
 		if(args.size() == 2) {
@@ -171,7 +175,13 @@ public class BankMasterChaincode extends ChaincodeBase {
 			if(account == null) {
 				return newErrorResponse(String.format("对不起，账号(%s)不存在!", accountNo));
 			}
-			String nowTime = DateTimeUtils.formatNow();
+			
+			byte[] transactionTimeBytes = transients.get("transactionTime");
+			if(ArrayUtils.isEmpty(transactionTimeBytes)) {
+				return newErrorResponse("请求参数不合法：交易时间(transients[transactionTime])不能为空!");
+			}
+			String transactionTime = new String(transactionTimeBytes, CHARSET);
+			
 			double balance = account.getAccountBalance();
 			account.setAccountBalance(balance + amount); //更新余额
 			
@@ -179,7 +189,7 @@ public class BankMasterChaincode extends ChaincodeBase {
 			
 			AccountTransaction transaction = new AccountTransaction(stub.getTxId(), account.getAccountNo(), balance,
 					account.getAccountBalance(), amount, null,
-					AccountTransactionType.DEPOSITE_MONEY.name(), AccountTransactionType.DEPOSITE_MONEY.getDescription(), nowTime);
+					AccountTransactionType.DEPOSITE_MONEY.name(), AccountTransactionType.DEPOSITE_MONEY.getDescription(), transactionTime);
 			
 			saveAccountTransaction(stub, transaction); //保存账户交易快照
 			
@@ -201,6 +211,7 @@ public class BankMasterChaincode extends ChaincodeBase {
 	 * @throws Exception
 	 */
 	protected synchronized Response drawalMoney(ChaincodeStub stub, List<String> args) throws Exception {
+		Map<String,byte[]> transients = stub.getTransient();
 		String accountNo = null;
 		String amountValue = null;
 		if(args.size() == 2) {
@@ -221,7 +232,13 @@ public class BankMasterChaincode extends ChaincodeBase {
 			if(account == null) {
 				return newErrorResponse(String.format("对不起，账号(%s)不存在!", accountNo));
 			}
-			String nowTime = DateTimeUtils.formatNow();
+			
+			byte[] transactionTimeBytes = transients.get("transactionTime");
+			if(ArrayUtils.isEmpty(transactionTimeBytes)) {
+				return newErrorResponse("请求参数不合法：交易时间(transients[transactionTime])不能为空!");
+			}
+			String transactionTime = new String(transactionTimeBytes, CHARSET);
+			
 			double balance = account.getAccountBalance();
 			account.setAccountBalance(balance - amount); //更新余额
 			
@@ -229,7 +246,7 @@ public class BankMasterChaincode extends ChaincodeBase {
 			
 			AccountTransaction transaction = new AccountTransaction(stub.getTxId(), account.getAccountNo(), balance,
 					account.getAccountBalance(), amount, null,
-					AccountTransactionType.DRAWAL_MONEY.name(), AccountTransactionType.DRAWAL_MONEY.getDescription(), nowTime);
+					AccountTransactionType.DRAWAL_MONEY.name(), AccountTransactionType.DRAWAL_MONEY.getDescription(), transactionTime);
 			
 			saveAccountTransaction(stub, transaction); //保存账户交易快照
 			
@@ -252,6 +269,7 @@ public class BankMasterChaincode extends ChaincodeBase {
 	 * @throws Exception
 	 */
 	protected synchronized Response transferAccount(ChaincodeStub stub, List<String> args) throws Exception {
+		Map<String,byte[]> transients = stub.getTransient();
 		String accountANo = null, accountBNo = null;
 		String amountValue = null;
 		if(args.size() == 3) {
@@ -280,7 +298,13 @@ public class BankMasterChaincode extends ChaincodeBase {
 			if(accountB == null) {
 				return newErrorResponse(String.format("对不起，转入账号(%s)不存在!", accountBNo));
 			}
-			String nowTime = DateTimeUtils.formatNow();
+			
+			byte[] transactionTimeBytes = transients.get("transactionTime");
+			if(ArrayUtils.isEmpty(transactionTimeBytes)) {
+				return newErrorResponse("请求参数不合法：交易时间(transients[transactionTime])不能为空!");
+			}
+			String transactionTime = new String(transactionTimeBytes, CHARSET);
+			
 			double balanceA = accountA.getAccountBalance();
 			accountA.setAccountBalance(balanceA - amount); //更新余额
 			
@@ -291,7 +315,7 @@ public class BankMasterChaincode extends ChaincodeBase {
 			
 			AccountTransaction transactionA = new AccountTransaction(stub.getTxId(), accountA.getAccountNo(), balanceA,
 					accountA.getAccountBalance(), amount, null,
-					AccountTransactionType.TRANSFER_OUT.name(), AccountTransactionType.TRANSFER_OUT.getDescription(), nowTime);
+					AccountTransactionType.TRANSFER_OUT.name(), AccountTransactionType.TRANSFER_OUT.getDescription(), transactionTime);
 			
 			saveAccountTransaction(stub, transactionA); //保存账户交易快照
 			
@@ -301,7 +325,7 @@ public class BankMasterChaincode extends ChaincodeBase {
 			
 			AccountTransaction transactionB = new AccountTransaction(stub.getTxId(), accountB.getAccountNo(), balanceB,
 					accountB.getAccountBalance(), amount, null,
-					AccountTransactionType.TRANSFER_IN.name(), AccountTransactionType.TRANSFER_IN.getDescription(), nowTime);
+					AccountTransactionType.TRANSFER_IN.name(), AccountTransactionType.TRANSFER_IN.getDescription(), transactionTime);
 			
 			saveAccountTransaction(stub, transactionB); //保存账户交易快照
 			
