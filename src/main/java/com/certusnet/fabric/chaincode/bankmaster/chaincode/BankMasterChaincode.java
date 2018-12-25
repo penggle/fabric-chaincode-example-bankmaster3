@@ -314,7 +314,7 @@ public class BankMasterChaincode extends ChaincodeBase {
 			saveCustomerAccount(stub, accountA); //保存账户
 			
 			AccountTransaction transactionA = new AccountTransaction(stub.getTxId(), accountA.getAccountNo(), balanceA,
-					accountA.getAccountBalance(), amount, null,
+					accountA.getAccountBalance(), amount, accountB.getAccountNo(),
 					AccountTransactionType.TRANSFER_OUT.name(), AccountTransactionType.TRANSFER_OUT.getDescription(), transactionTime);
 			
 			saveAccountTransaction(stub, transactionA); //保存账户交易快照
@@ -324,7 +324,7 @@ public class BankMasterChaincode extends ChaincodeBase {
 			saveCustomerAccount(stub, accountB); //保存账户
 			
 			AccountTransaction transactionB = new AccountTransaction(stub.getTxId(), accountB.getAccountNo(), balanceB,
-					accountB.getAccountBalance(), amount, null,
+					accountB.getAccountBalance(), amount, accountA.getAccountNo(),
 					AccountTransactionType.TRANSFER_IN.name(), AccountTransactionType.TRANSFER_IN.getDescription(), transactionTime);
 			
 			saveAccountTransaction(stub, transactionB); //保存账户交易快照
